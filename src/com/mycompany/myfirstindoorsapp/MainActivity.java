@@ -7,7 +7,13 @@ import android.os.Bundle;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.FragmentTransaction;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.view.View;
+import android.widget.AdapterView;
+import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ArrayAdapter;
+import android.widget.AutoCompleteTextView;
 import android.widget.Spinner;
 import android.widget.Toast;
 
@@ -23,6 +29,7 @@ import com.customlbs.library.callbacks.ZoneCallback;
 import com.customlbs.library.model.Building;
 import com.customlbs.library.model.Floor;
 import com.customlbs.library.model.Zone;
+import com.customlbs.model.ZonePoint;
 import com.customlbs.shared.Coordinate;
 import com.customlbs.surface.library.IndoorsSurface;
 import com.customlbs.surface.library.IndoorsSurface.OnSurfaceClickListener;
@@ -36,18 +43,21 @@ import com.customlbs.surface.library.ViewMode;
  * @author indoo.rs | Philipp Koenig
  *
  */
-public class MainActivity extends FragmentActivity implements IndoorsLocationListener, OnSurfaceClickListener {
+public class MainActivity extends FragmentActivity implements IndoorsLocationListener, OnSurfaceClickListener, OnItemClickListener {
 
 	private IndoorsSurfaceFragment indoorsFragment;
 	private Spinner zoneSpinner;
 	Building currentBuilding;
 	Coordinate userPosition;
+	AutoCompleteTextView textView;
+	List<Zone> zonesList;
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 
-		zoneSpinner=(Spinner)findViewById(R.id.zones_list);
+		textView=(AutoCompleteTextView)findViewById(R.id.textView1);
+		textView.setOnItemClickListener(this);
 		IndoorsFactory.Builder indoorsBuilder = new IndoorsFactory.Builder();
 		IndoorsSurfaceFactory.Builder surfaceBuilder = new IndoorsSurfaceFactory.Builder();
 		indoorsBuilder.setContext(this);
@@ -55,7 +65,7 @@ public class MainActivity extends FragmentActivity implements IndoorsLocationLis
 		indoorsBuilder.setApiKey("0e414449-8674-4ef2-9cad-294c2c670af9");
 		// TODO: replace 12345 with the id of the building you uploaded to
 		// our cloud using the MMT
-		indoorsBuilder.setBuildingId((long) 336853225);
+		indoorsBuilder.setBuildingId((long) 337413428);
 				// callback for indoo.rs-events
 		indoorsBuilder.setUserInteractionListener(this);
 
@@ -63,6 +73,7 @@ public class MainActivity extends FragmentActivity implements IndoorsLocationLis
 
 		indoorsFragment = surfaceBuilder.build();
 		indoorsFragment.setViewMode(ViewMode.HIGHLIGHT_CURRENT_ZONE);
+	
 		Log.e("Test",""+indoorsFragment.getCurrentZones());
 		FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
 		transaction.add(R.id.container, indoorsFragment, "indoors");
@@ -71,17 +82,16 @@ public class MainActivity extends FragmentActivity implements IndoorsLocationLis
 
 	public void positionUpdated(Coordinate userPosition, int accuracy) {
 		this.userPosition=userPosition;
-		GeoCoordinate geoCoordinate = indoorsFragment.getCurrentUserGpsPosition();
 		Toast.makeText(
 			    this,
 			    "User is located at " , Toast.LENGTH_SHORT).show();
 		    indoorsFragment.updateSurface();
-		if (geoCoordinate != null) {
+		if (indoorsFragment.getCurrentUserGpsPosition() != null) {
 			
 			Toast.makeText(
 			    this,
-			    "User is located at " + geoCoordinate.getLatitude() + ","
-			    + geoCoordinate.getLongitude(), Toast.LENGTH_SHORT).show();
+			    "User is located at " + indoorsFragment.getCurrentUserGpsPosition().getLatitude() + ","
+			    + indoorsFragment.getCurrentUserGpsPosition().getLongitude(), Toast.LENGTH_SHORT).show();
 		    indoorsFragment.updateSurface();
 
 		}
@@ -91,7 +101,7 @@ public class MainActivity extends FragmentActivity implements IndoorsLocationLis
 		// indoo.rs SDK successfully loaded the building you requested and
 		// calculates a position now
 		currentBuilding=building;
-indoorsFragment.getIndoorsSurface().registerOnSurfaceClickListener(this);
+		indoorsFragment.getIndoorsSurface().registerOnSurfaceClickListener(this);
 		Toast.makeText(
 		    this,
 		    "Building is located at " + building.getLatOrigin() / 1E6 + ","
@@ -103,15 +113,18 @@ indoorsFragment.getIndoorsSurface().registerOnSurfaceClickListener(this);
 			public void setZones(ArrayList<Zone> zones) {
 				// TODO Auto-generated method stub
 				Log.e("On ZoneCallback", "The zone count"+zones.size());
+				zonesList=zones;
 				ArrayList<String> zonesStrings=new ArrayList<String>();
+				
 
 				for (Zone zone : zones) {
 					zonesStrings.add(zone.getName());
+					
 				}
 				ArrayAdapter<String> dataAdapter = new ArrayAdapter<String>(getBaseContext(),
 						android.R.layout.simple_spinner_item, zonesStrings);
 					dataAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-					zoneSpinner.setAdapter(dataAdapter);
+					textView.setAdapter(dataAdapter);
 			}
 		});
 		Log.e("Test",""+indoorsFragment.getCurrentZones().size());
@@ -124,7 +137,7 @@ indoorsFragment.getIndoorsSurface().registerOnSurfaceClickListener(this);
 
 	public void changedFloor(int floorLevel, String name) {
 		// user changed the floor
-		Floor currentFloor=currentBuilding.getFloorByLevel(floorLevel);
+		
 		
 	}
 
@@ -148,12 +161,45 @@ indoorsFragment.getIndoorsSurface().registerOnSurfaceClickListener(this);
 
 	@Override
 	public void onClick(Coordinate mapPoint) {
-		// TODO Auto-generated method stub
-		indoorsFragment.getIndoors().getRouteAToB(userPosition, mapPoint, new RoutingCallback() {
+		drawRoute(mapPoint);
+	}
+	Coordinate selectedZoneCenter;
+	@Override
+	public void onItemClick(AdapterView<?> parent, View view, int position,
+			long id) {
+				Log.e("The selected index",""+id);
+				
+		selectedZoneCenter=	getZoneCenter(position);
+	}
+	
+	
+	List<Coordinate> selectedZoneCoordinates;
+
+	private Coordinate getZoneCenter(int position) {
+		for (Zone zoneObje :zonesList) {
+			if(zoneObje.getName().equalsIgnoreCase(textView.getText().toString()))
+			{
+				selectedZoneCoordinates=	zoneObje.getZonePoints();
+				int x=0,y=0,z=0;
+				for (Coordinate coor : selectedZoneCoordinates) {
+					x+=coor.x;
+					y+=coor.y;
+					z+=coor.z;
+				}
+				return new Coordinate(x/selectedZoneCoordinates.size(), y/selectedZoneCoordinates.size(), z/selectedZoneCoordinates.size());
+
+			}
+		}
+		return null;
+	}
+	private void drawRoute( Coordinate destination)
+	{
+indoorsFragment.getIndoors().getRouteAToB(userPosition, destination, new RoutingCallback() {
 			
 			@Override
 			public void onError(IndoorsException indoorsException) {
-				// TODO Auto-generated method stub
+				
+				
 				
 			}
 			
@@ -165,5 +211,23 @@ indoorsFragment.getIndoorsSurface().registerOnSurfaceClickListener(this);
 			}
 		});
 	}
-	
+	@Override
+	public boolean onCreateOptionsMenu(Menu menu) {
+		// Inflate the menu; this adds items to the action bar if it is present.
+		getMenuInflater().inflate(R.menu.activity_main, menu);
+		return true;
+	}
+
+	@Override
+	public boolean onOptionsItemSelected(MenuItem item) {
+		// Handle action bar item clicks here. The action bar will
+		// automatically handle clicks on the Home/Up button, so long
+		// as you specify a parent activity in AndroidManifest.xml.
+		int id = item.getItemId();
+		if (id == R.id.getRooute) {
+			drawRoute(selectedZoneCenter);
+			return true;
+		}
+		return super.onOptionsItemSelected(item);
+	}
 }
