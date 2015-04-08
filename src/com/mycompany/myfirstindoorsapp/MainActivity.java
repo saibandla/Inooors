@@ -3,6 +3,10 @@ package com.mycompany.myfirstindoorsapp;
 import java.util.ArrayList;
 import java.util.List;
 
+import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.FragmentTransaction;
@@ -10,6 +14,7 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ArrayAdapter;
@@ -31,10 +36,12 @@ import com.customlbs.library.model.Floor;
 import com.customlbs.library.model.Zone;
 import com.customlbs.model.ZonePoint;
 import com.customlbs.shared.Coordinate;
+import com.customlbs.surface.library.DefaultSurfacePainterConfiguration;
 import com.customlbs.surface.library.IndoorsSurface;
 import com.customlbs.surface.library.IndoorsSurface.OnSurfaceClickListener;
 import com.customlbs.surface.library.IndoorsSurfaceFactory;
 import com.customlbs.surface.library.IndoorsSurfaceFragment;
+import com.customlbs.surface.library.SurfacePainterConfiguration;
 import com.customlbs.surface.library.ViewMode;
 
 /**
@@ -51,13 +58,17 @@ public class MainActivity extends FragmentActivity implements IndoorsLocationLis
 	Coordinate userPosition;
 	AutoCompleteTextView textView;
 	List<Zone> zonesList;
+	Bitmap navigation;
+	InputMethodManager imm;
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
-
+		imm = (InputMethodManager)getSystemService(
+			      Context.INPUT_METHOD_SERVICE);
 		textView=(AutoCompleteTextView)findViewById(R.id.textView1);
 		textView.setOnItemClickListener(this);
+		navigation=BitmapFactory.decodeResource(getResources(), R.drawable.location);
 		IndoorsFactory.Builder indoorsBuilder = new IndoorsFactory.Builder();
 		IndoorsSurfaceFactory.Builder surfaceBuilder = new IndoorsSurfaceFactory.Builder();
 		indoorsBuilder.setContext(this);
@@ -68,7 +79,15 @@ public class MainActivity extends FragmentActivity implements IndoorsLocationLis
 		indoorsBuilder.setBuildingId((long) 337413428);
 				// callback for indoo.rs-events
 		indoorsBuilder.setUserInteractionListener(this);
+		SurfacePainterConfiguration configuration = DefaultSurfacePainterConfiguration.getConfiguration();
+		configuration.setNavigationPoint(navigation);
+		configuration.getUserPositionCircleInlinePaintConfiguration().setColor(Color.RED);
+		configuration.getLargeCircleOutlinePaintConfiguration().setColor(Color.RED);  
+		configuration.getRoutingPathPaintConfiguration().setColor(Color.RED);
+		configuration.getRoutingPathPaintConfiguration().setStrokeWidth((float) 2.0);
 
+		surfaceBuilder.setSurfacePainterConfiguration(configuration);
+		surfaceBuilder.setSurfacePainterConfiguration(configuration);
 		surfaceBuilder.setIndoorsBuilder(indoorsBuilder);
 
 		indoorsFragment = surfaceBuilder.build();
@@ -168,7 +187,8 @@ public class MainActivity extends FragmentActivity implements IndoorsLocationLis
 	public void onItemClick(AdapterView<?> parent, View view, int position,
 			long id) {
 				Log.e("The selected index",""+id);
-				
+				imm.hideSoftInputFromWindow(textView.getWindowToken(), 0);
+
 		selectedZoneCenter=	getZoneCenter(position);
 	}
 	
@@ -192,7 +212,7 @@ public class MainActivity extends FragmentActivity implements IndoorsLocationLis
 		}
 		return null;
 	}
-	private void drawRoute( Coordinate destination)
+	private void drawRoute( final Coordinate destination)
 	{
 indoorsFragment.getIndoors().getRouteAToB(userPosition, destination, new RoutingCallback() {
 			
@@ -207,7 +227,10 @@ indoorsFragment.getIndoors().getRouteAToB(userPosition, destination, new Routing
 			public void setRoute(ArrayList<Coordinate> path) {
 				// TODO Auto-generated method stub
 				 indoorsFragment.getSurfaceState().setRoutingPath(path, false);
-				    indoorsFragment.updateSurface();
+				 
+				 indoorsFragment.addOverlay(new SampleSurfaceOverlay());  
+				 indoorsFragment.updateSurface();
+				   
 			}
 		});
 	}
