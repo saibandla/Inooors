@@ -76,7 +76,7 @@ public class MainActivity extends FragmentActivity implements IndoorsLocationLis
 		indoorsBuilder.setApiKey("0e414449-8674-4ef2-9cad-294c2c670af9");
 		// TODO: replace 12345 with the id of the building you uploaded to
 		// our cloud using the MMT
-		indoorsBuilder.setBuildingId((long) 337413428);
+		indoorsBuilder.setBuildingId((long) 341623794);
 				// callback for indoo.rs-events
 		indoorsBuilder.setUserInteractionListener(this);
 		SurfacePainterConfiguration configuration = DefaultSurfacePainterConfiguration.getConfiguration();
@@ -126,38 +126,56 @@ public class MainActivity extends FragmentActivity implements IndoorsLocationLis
 		    "Building is located at " + building.getLatOrigin() / 1E6 + ","
 		    + building.getLonOrigin() / 1E6, Toast.LENGTH_SHORT).show();
 		;
-		indoorsFragment.getIndoors().getZones(building, new ZoneCallback() {
-			
-			@Override
-			public void setZones(ArrayList<Zone> zones) {
-				// TODO Auto-generated method stub
-				Log.e("On ZoneCallback", "The zone count"+zones.size());
-				zonesList=zones;
-				ArrayList<String> zonesStrings=new ArrayList<String>();
-				
+		reloatData();
 
-				for (Zone zone : zones) {
-					zonesStrings.add(zone.getName());
-					
-				}
-				ArrayAdapter<String> dataAdapter = new ArrayAdapter<String>(getBaseContext(),
-						android.R.layout.simple_spinner_item, zonesStrings);
-					dataAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-					textView.setAdapter(dataAdapter);
-			}
-		});
+//		indoorsFragment.getIndoors().getZones(building, new ZoneCallback() {
+//			
+//			@Override
+//			public void setZones(ArrayList<Zone> zones) {
+//				// TODO Auto-generated method stub
+//				Log.e("On ZoneCallback", "The zone count"+zones.size());
+//				zonesList=zones;
+//				ArrayList<String> zonesStrings=new ArrayList<String>();
+//				
+//
+//				for (Zone zone : zones) {
+//					zonesStrings.add(zone.getName());
+//					
+//				}
+//				ArrayAdapter<String> dataAdapter = new ArrayAdapter<String>(getBaseContext(),
+//						android.R.layout.simple_spinner_item, zonesStrings);
+//					dataAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+//					textView.setAdapter(dataAdapter);
+//			}
+//		});
 		Log.e("Test",""+indoorsFragment.getCurrentZones().size());
 
 	}
 
+	public void reloatData()
+	{
+		zonesList=	indoorsFragment.getCurrentZones();
+		ArrayList<String> zonesStrings=new ArrayList<String>();
+		
+
+		for (Zone zone : zonesList) {
+			zonesStrings.add(zone.getName());
+			
+		}
+		ArrayAdapter<String> dataAdapter = new ArrayAdapter<String>(getBaseContext(),
+				android.R.layout.simple_spinner_item, zonesStrings);
+			dataAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+			textView.setAdapter(dataAdapter);
+	}
 	public void onError(IndoorsException indoorsException) {
 		Toast.makeText(this, indoorsException.getMessage(), Toast.LENGTH_LONG).show();
 	}
 
 	public void changedFloor(int floorLevel, String name) {
 		// user changed the floor
-		
-		
+		indoorsFragment.updateSurface();
+		reloatData();
+
 	}
 
 	public void leftBuilding(Building building) {
@@ -180,7 +198,14 @@ public class MainActivity extends FragmentActivity implements IndoorsLocationLis
 
 	@Override
 	public void onClick(Coordinate mapPoint) {
-		drawRoute(mapPoint);
+		for (Zone  z : zonesList) {
+			if(z.containsPosition(mapPoint))
+			{
+				drawRoute(mapPoint,z);
+				return;
+			}
+		}
+		drawRoute(mapPoint, null);
 	}
 	Coordinate selectedZoneCenter;
 	@Override
@@ -193,12 +218,14 @@ public class MainActivity extends FragmentActivity implements IndoorsLocationLis
 	}
 	
 	
+	
 	List<Coordinate> selectedZoneCoordinates;
-
+	Zone seletedZone;
 	private Coordinate getZoneCenter(int position) {
 		for (Zone zoneObje :zonesList) {
 			if(zoneObje.getName().equalsIgnoreCase(textView.getText().toString()))
 			{
+				seletedZone=zoneObje;
 				selectedZoneCoordinates=	zoneObje.getZonePoints();
 				int x=0,y=0,z=0;
 				for (Coordinate coor : selectedZoneCoordinates) {
@@ -212,7 +239,7 @@ public class MainActivity extends FragmentActivity implements IndoorsLocationLis
 		}
 		return null;
 	}
-	private void drawRoute( final Coordinate destination)
+	private void drawRoute( final Coordinate destination,final Zone seletedZone)
 	{
 indoorsFragment.getIndoors().getRouteAToB(userPosition, destination, new RoutingCallback() {
 			
@@ -228,7 +255,7 @@ indoorsFragment.getIndoors().getRouteAToB(userPosition, destination, new Routing
 				// TODO Auto-generated method stub
 				 indoorsFragment.getSurfaceState().setRoutingPath(path, false);
 				 
-				 indoorsFragment.addOverlay(new SampleSurfaceOverlay());  
+				 indoorsFragment.addOverlay(new SampleSurfaceOverlay(seletedZone));  
 				 indoorsFragment.updateSurface();
 				   
 			}
@@ -248,7 +275,7 @@ indoorsFragment.getIndoors().getRouteAToB(userPosition, destination, new Routing
 		// as you specify a parent activity in AndroidManifest.xml.
 		int id = item.getItemId();
 		if (id == R.id.getRooute) {
-			drawRoute(selectedZoneCenter);
+			drawRoute(selectedZoneCenter,seletedZone);
 			return true;
 		}
 		return super.onOptionsItemSelected(item);
