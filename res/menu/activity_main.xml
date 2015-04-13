@@ -1,10 +1,14 @@
-<menu xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:id="@+id/menu_settings"
-        android:title="@string/menu_settings"
-        android:orderInCategory="100" />
-     <item android:id="@+id/getRooute"
-        android:title="@string/route"
-        android:showAsAction="always"
-        
-        android:orderInCategory="100" />
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:appp="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context="com.mycompany.myfirstindoorsapp.MainActivity" >
+
+   <item android:id="@+id/action_search"
+          android:title="@string/search_hint"
+          android:icon="@android:drawable/ic_menu_search"
+          
+          android:showAsAction="always"
+          android:actionViewClass="android.widget.SearchView" />
+    
+
 </menu>
