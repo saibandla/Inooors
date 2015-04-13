@@ -192,11 +192,14 @@ public class MainActivity extends FragmentActivity implements
 	public void onItemClick(AdapterView<?> parent, View view, int position,
 			long id) {
 		Log.e("The selected index", "" + id);
-		selectedZoneCenter = getZoneCenter(position);
 		TextView txt = (TextView) view.findViewById(android.R.id.text1);
+
+		searchView.setQuery(txt.getText(), false);
+
+		selectedZoneCenter = getZoneCenter(position);
 		searchView.setIconified(false);
-		searchView.setQuery(txt.getText(), true);
-		searchView.setImeOptions(0);
+		drawRoute(selectedZoneCenter, seletedZone);
+		searchView.clearFocus();
 	}
 
 	@Override
@@ -214,8 +217,7 @@ public class MainActivity extends FragmentActivity implements
 			@Override
 			public boolean onQueryTextSubmit(String arg0) {
 				imm.hideSoftInputFromWindow(getCurrentFocus().getWindowToken(), InputMethodManager.HIDE_NOT_ALWAYS);
-				drawRoute(selectedZoneCenter, seletedZone);
-				searchView.clearFocus();
+				
 				return true;
 			}
 
