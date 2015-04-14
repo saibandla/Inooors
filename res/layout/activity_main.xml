@@ -2,6 +2,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
+    android:background="@android:color/white"
     android:padding="0dp"
     android:orientation="vertical" ><ImageView
         android:id="@+id/splashImage"
@@ -17,7 +18,7 @@
         android:layout_height="100dp"
         android:layout_marginTop="10dp" >
     </ListView>
-
+<ImageView android:layout_width="wrap_content" android:background="@android:color/white" android:layout_height="wrap_content"  android:layout_gravity="right" android:src="@drawable/down32"></ImageView>
     <LinearLayout
         android:id="@+id/container"
         android:layout_width="match_parent"
